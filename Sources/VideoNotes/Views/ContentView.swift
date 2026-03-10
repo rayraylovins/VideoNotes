@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var voiceModeEnabled = false
     @State private var showExportSheet = false
     @State private var selectedExportFormat: ExportFormat = .plainText
+    @State private var wasPausedByAutoPause = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -344,13 +345,15 @@ struct ContentView: View {
 
     private func commitNote() {
         sessionVM.commitNote()
-        playerVM.play()
+        if wasPausedByAutoPause { playerVM.play() }
+        wasPausedByAutoPause = false
         restartKeyMonitor()
     }
 
     private func cancelNote() {
         sessionVM.cancelNote()
-        playerVM.play()
+        if wasPausedByAutoPause { playerVM.play() }
+        wasPausedByAutoPause = false
         restartKeyMonitor()
     }
 
@@ -395,14 +398,20 @@ struct ContentView: View {
 
     private func setupKeyHandler() {
         keyHandler.onPrintableKey = { event in
-            guard autoPauseEnabled,
-                  !voiceModeEnabled,
-                  playerVM.isPlaying,
+            guard !voiceModeEnabled,
+                  playerVM.hasVideo,
                   !sessionVM.isEditing else {
                 return false
             }
 
-            playerVM.pause()
+            // Only pause if auto-pause is enabled
+            if autoPauseEnabled && playerVM.isPlaying {
+                wasPausedByAutoPause = true
+                playerVM.pause()
+            } else {
+                wasPausedByAutoPause = false
+            }
+
             let tc = playerVM.currentTime.toTimecodeInfo(
                 frameRate: playerVM.frameRate,
                 dropFrame: playerVM.isDropFrame

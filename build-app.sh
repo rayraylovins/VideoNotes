@@ -18,6 +18,7 @@ mkdir -p "$RESOURCES"
 
 cp "$BUILD_DIR/$APP_NAME" "$MACOS/$APP_NAME"
 cp "Sources/VideoNotes/Resources/Info.plist" "$CONTENTS/Info.plist"
+cp "Sources/VideoNotes/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 
 echo "Done! Created $APP_BUNDLE"
 echo "You can now run: open $APP_BUNDLE"

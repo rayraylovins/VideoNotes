@@ -11,7 +11,7 @@ let package = Package(
         .executableTarget(
             name: "VideoNotes",
             path: "Sources/VideoNotes",
-            exclude: ["Resources/Info.plist"]
+            exclude: ["Resources/Info.plist", "Resources/AppIcon.svg", "Resources/AppIcon.icns"]
         ),
         .testTarget(
             name: "VideoNotesTests",
