@@ -9,16 +9,22 @@ struct NoteOverlayView: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             // Timecode badge
             Text(timecodeString)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.85))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(.white.opacity(0.15))
+                        .fill(
+                            LinearGradient(
+                                colors: [Theme.accentCyan.opacity(0.5), Theme.accentViolet.opacity(0.5)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                 )
 
             // Text input
@@ -40,54 +46,50 @@ struct NoteOverlayView: View {
                 Label("Esc to cancel", systemImage: "escape")
             }
             .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.white.opacity(0.45))
+            .foregroundStyle(Theme.tertiaryText)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .frame(maxWidth: 600)
         .background {
             ZStack {
-                // Frosted glass base
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                // Deep glass base
+                RoundedRectangle(cornerRadius: Theme.cornerRadiusLarge, style: .continuous)
                     .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
 
-                // Tinted glass overlay
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                // Purple-blue tint
+                RoundedRectangle(cornerRadius: Theme.cornerRadiusLarge, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.12),
-                                Color.white.opacity(0.04),
-                                Color.clear
+                                Theme.accentViolet.opacity(0.15),
+                                Theme.accentCyan.opacity(0.08),
+                                Theme.deepPurple.opacity(0.2)
                             ],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
                     )
 
-                // Inner highlight stroke (top edge light refraction)
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                // Top highlight
+                RoundedRectangle(cornerRadius: Theme.cornerRadiusLarge, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.5),
-                                Color.white.opacity(0.15),
-                                Color.white.opacity(0.05)
+                                Color.white.opacity(0.35),
+                                Color.white.opacity(0.10),
+                                Color.white.opacity(0.03)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
                         lineWidth: 0.75
                     )
-
-                // Outer subtle shadow border
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.2), lineWidth: 0.5)
-                    .padding(-0.5)
             }
         }
-        .shadow(color: .black.opacity(0.35), radius: 20, y: 8)
-        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+        .shadow(color: Theme.accentViolet.opacity(0.2), radius: 30, y: 4)
+        .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
         .onAppear {
             isFocused = true
         }

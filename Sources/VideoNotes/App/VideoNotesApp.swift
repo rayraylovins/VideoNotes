@@ -10,7 +10,7 @@ struct VideoNotesApp: App {
                 .environmentObject(appState)
                 .frame(minWidth: 800, minHeight: 500)
         }
-        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .defaultSize(width: 1100, height: 700)
         .commands {
             CommandGroup(replacing: .saveItem) {

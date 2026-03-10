@@ -9,6 +9,11 @@ struct VideoPlayerView: NSViewRepresentable {
         view.player = player
         view.controlsStyle = .floating
         view.showsFullScreenToggleButton = true
+        // Make the player view background transparent so the app gradient shows through
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.clear.cgColor
+        view.contentOverlayView?.wantsLayer = true
+        view.contentOverlayView?.layer?.backgroundColor = NSColor.clear.cgColor
         return view
     }
 

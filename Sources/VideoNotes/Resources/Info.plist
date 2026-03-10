@@ -22,6 +22,10 @@
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>VideoNotes uses speech recognition to transcribe your spoken notes with timecodes.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>VideoNotes needs microphone access to transcribe your voice into timestamped notes.</string>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
