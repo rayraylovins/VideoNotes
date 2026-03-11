@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import VideoNotes
 
 final class ExporterTests: XCTestCase {
@@ -8,7 +9,8 @@ final class ExporterTests: XCTestCase {
         session.addNote(Note(
             timecodeSeconds: 10.0,
             timecodeString: "00:00:10:00",
-            text: "First note"
+            text: "First note",
+            thumbnailJPEGData: makeThumbnailJPEGData()
         ))
         session.addNote(Note(
             timecodeSeconds: 65.5,
@@ -96,6 +98,12 @@ final class ExporterTests: XCTestCase {
         XCTAssertEqual(header, "%PDF")
     }
 
+    func testPDFExportWithFrameThumbnailsProducesData() throws {
+        let exporter = PDFExporter()
+        let data = try exporter.export(session: makeSession())
+        XCTAssertGreaterThan(data.count, 500)
+    }
+
     // MARK: - Empty Session
 
     func testExportEmptySession() throws {
@@ -104,5 +112,27 @@ final class ExporterTests: XCTestCase {
         let data = try exporter.export(session: session)
         let text = String(data: data, encoding: .utf8)!
         XCTAssertTrue(text.contains("Video: empty.mov"))
+    }
+
+    private func makeThumbnailJPEGData() -> Data? {
+        let size = NSSize(width: 160, height: 90)
+        let image = NSImage(size: size)
+        image.lockFocus()
+
+        NSColor(calibratedRed: 0.19, green: 0.46, blue: 0.78, alpha: 1).setFill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: 16),
+            .foregroundColor: NSColor.white
+        ]
+        NSAttributedString(string: "FRAME", attributes: attrs).draw(at: NSPoint(x: 36, y: 34))
+        image.unlockFocus()
+
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+        return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.8])
     }
 }

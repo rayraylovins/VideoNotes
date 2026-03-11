@@ -2,6 +2,7 @@ import AVFoundation
 import AVKit
 import Combine
 import SwiftUI
+import AppKit
 
 @MainActor
 final class PlayerViewModel: ObservableObject {
@@ -84,6 +85,27 @@ final class PlayerViewModel: ObservableObject {
     func seek(to seconds: Double) {
         let time = CMTime(seconds: seconds, preferredTimescale: 600)
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    func captureFrameJPEG(at seconds: Double, maxSize: CGSize = CGSize(width: 640, height: 360)) async -> Data? {
+        guard let asset = player.currentItem?.asset else { return nil }
+        let time = CMTime(seconds: seconds, preferredTimescale: 600)
+
+        return await Task.detached(priority: .utility) {
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = maxSize
+            generator.requestedTimeToleranceBefore = .zero
+            generator.requestedTimeToleranceAfter = .zero
+
+            do {
+                let image = try generator.copyCGImage(at: time, actualTime: nil)
+                let bitmapRep = NSBitmapImageRep(cgImage: image)
+                return bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.82])
+            } catch {
+                return nil
+            }
+        }.value
     }
 
     private func detectFrameRate(asset: AVAsset) async {

@@ -8,124 +8,152 @@ struct NotesPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Session Notes")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        Text(sessionVM.session.videoFileName.isEmpty ? "No video loaded" : sessionVM.session.videoFileName)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Theme.secondaryText)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    Text("\(sessionVM.session.notes.count)")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(
-                            Capsule()
-                                .fill(Theme.heroGradient.opacity(0.30))
-                        )
-                }
-
-                HStack(spacing: 10) {
-                    statCard(title: "Status", value: sessionVM.session.notes.isEmpty ? "Empty" : "Active", tint: Theme.accentMint)
-                    statCard(title: "Format", value: frameRateLabel, tint: Theme.accentCyan)
-                    statCard(title: "Mode", value: sessionVM.isEditing ? "Editing" : "Ready", tint: Theme.accentViolet)
-                }
-            }
-            .padding(.horizontal, 18)
-            .padding(.top, 20)
-            .padding(.bottom, 18)
+            panelHeader
 
             Rectangle()
                 .fill(Theme.divider)
                 .frame(height: 1)
 
             if sessionVM.session.notes.isEmpty {
-                VStack(alignment: .leading, spacing: 18) {
-                    Spacer()
-
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Theme.accentBlue.opacity(0.35), Theme.accentViolet.opacity(0.18)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 72, height: 72)
-                        .overlay {
-                            Image(systemName: "note.text.badge.plus")
-                                .font(.system(size: 26, weight: .medium))
-                                .foregroundColor(.white)
-                        }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No notes yet")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        Text("Play the video and type anywhere, press N, or use voice capture to build your review log.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Theme.secondaryText)
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        hintRow(systemName: "keyboard", text: "Type during playback to capture the current frame")
-                        hintRow(systemName: "pause.circle", text: "Auto-pause keeps the exact frame in place")
-                        hintRow(systemName: "waveform", text: "Voice mode creates notes hands-free")
-                    }
-
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .padding(22)
+                emptyPanel
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(Array(sessionVM.session.sortedNotes.enumerated()), id: \.element.id) { index, note in
-                            NoteRowView(
-                                note: note,
-                                isEditing: sessionVM.editingNoteID == note.id,
-                                editText: $editText,
-                                noteNumber: index + 1,
-                                onSeek: { onSeek(note.timecodeSeconds) },
-                                onCommitEdit: {
-                                    sessionVM.updateNoteText(id: note.id, text: editText)
-                                    sessionVM.finishEditingNote()
-                                },
-                                onDelete: { sessionVM.deleteNote(id: note.id) }
-                            )
-                            .onTapGesture(count: 2) {
-                                editText = note.text
-                                sessionVM.startEditingNote(note.id)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                }
-                .scrollIndicators(.hidden)
+                notesTable
             }
         }
         .frame(maxHeight: .infinity)
+    }
+
+    private var panelHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("REVIEW LOG")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .tracking(1.6)
+                        .foregroundColor(Theme.tertiaryText)
+
+                    Text(sessionVM.session.videoFileName.isEmpty ? "No active clip" : sessionVM.session.videoFileName)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Text("\(sessionVM.session.notes.count)")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule()
+                            .fill(Theme.accentCyan.opacity(0.22))
+                    )
+            }
+
+            HStack(spacing: 10) {
+                statCard(title: "Status", value: sessionVM.session.notes.isEmpty ? "Idle" : "Rolling", tint: sessionVM.session.notes.isEmpty ? Theme.accentAmber : Theme.accentMint)
+                statCard(title: "Rate", value: frameRateLabel, tint: Theme.accentCyan)
+                statCard(title: "TC Base", value: dropFrameLabel, tint: Theme.accentViolet)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
+    }
+
+    private var emptyPanel: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Spacer()
+
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+                .frame(width: 70, height: 70)
+                .overlay {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("No markers logged")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+
+                Text("Create notes during playback to build a frame-accurate editorial review log.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Theme.secondaryText)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                hintRow(prefix: "TYPE", text: "Start typing while the clip plays")
+                hintRow(prefix: "N", text: "Insert a manual note at the current frame")
+                hintRow(prefix: "VOICE", text: "Record spoken notes with timestamps")
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(22)
+    }
+
+    private var notesTable: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("MARK")
+                    .frame(width: 44, alignment: .leading)
+                Text("TIMECODE")
+                    .frame(width: 108, alignment: .leading)
+                Text("NOTE")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .font(.system(size: 10, weight: .bold, design: .monospaced))
+            .tracking(1.2)
+            .foregroundColor(Theme.tertiaryText)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.16))
+
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(sessionVM.session.sortedNotes.enumerated()), id: \.element.id) { index, note in
+                        NoteRowView(
+                            note: note,
+                            isEditing: sessionVM.editingNoteID == note.id,
+                            editText: $editText,
+                            noteNumber: index + 1,
+                            onSeek: { onSeek(note.timecodeSeconds) },
+                            onCommitEdit: {
+                                sessionVM.updateNoteText(id: note.id, text: editText)
+                                sessionVM.finishEditingNote()
+                            },
+                            onDelete: { sessionVM.deleteNote(id: note.id) }
+                        )
+                        .onTapGesture(count: 2) {
+                            editText = note.text
+                            sessionVM.startEditingNote(note.id)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+            }
+            .scrollIndicators(.hidden)
+        }
     }
 
     private var frameRateLabel: String {
         String(format: "%.2f", sessionVM.session.frameRate)
     }
 
+    private var dropFrameLabel: String {
+        sessionVM.session.isDropFrame ? "DF" : "NDF"
+    }
+
     private func statCard(title: String, value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundColor(Theme.tertiaryText)
 
             Text(value)
@@ -136,20 +164,21 @@ struct NotesPanelView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(tint.opacity(0.12))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(tint.opacity(0.10))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(tint.opacity(0.18), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(tint.opacity(0.16), lineWidth: 1)
                 }
         )
     }
 
-    private func hintRow(systemName: String, text: String) -> some View {
+    private func hintRow(prefix: String, text: String) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: systemName)
+            Text(prefix)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .foregroundColor(Theme.accentCyan)
-                .frame(width: 18)
+                .frame(width: 44, alignment: .leading)
 
             Text(text)
                 .font(.system(size: 12, weight: .medium))

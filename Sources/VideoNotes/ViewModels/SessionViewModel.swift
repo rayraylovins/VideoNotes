@@ -14,16 +14,20 @@ final class SessionViewModel: ObservableObject {
     private var pendingTimecodeSeconds: Double = 0
     private var pendingTimecodeString: String = "00:00:00:00"
 
+    var pendingNoteTimecodeSeconds: Double? {
+        isEditing ? pendingTimecodeSeconds : nil
+    }
+
     // MARK: - Note Creation
 
-    func beginNote(timecodeSeconds: Double, timecodeString: String) {
+    func beginNote(timecodeSeconds: Double, timecodeString: String, initialText: String = "") {
         pendingTimecodeSeconds = timecodeSeconds
         pendingTimecodeString = timecodeString
-        currentNoteText = ""
+        currentNoteText = initialText
         isEditing = true
     }
 
-    func commitNote() {
+    func commitNote(thumbnailJPEGData: Data? = nil) {
         guard isEditing else { return }
         let text = currentNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
@@ -34,7 +38,8 @@ final class SessionViewModel: ObservableObject {
         let note = Note(
             timecodeSeconds: pendingTimecodeSeconds,
             timecodeString: pendingTimecodeString,
-            text: text
+            text: text,
+            thumbnailJPEGData: thumbnailJPEGData
         )
         session.addNote(note)
         currentNoteText = ""
@@ -56,6 +61,20 @@ final class SessionViewModel: ObservableObject {
 
     func updateNoteText(id: UUID, text: String) {
         session.updateNote(id: id, text: text)
+        hasUnsavedChanges = true
+    }
+
+    func addCapturedNote(timecodeSeconds: Double, timecodeString: String, text: String, thumbnailJPEGData: Data? = nil) {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+
+        let note = Note(
+            timecodeSeconds: timecodeSeconds,
+            timecodeString: timecodeString,
+            text: trimmedText,
+            thumbnailJPEGData: thumbnailJPEGData
+        )
+        session.addNote(note)
         hasUnsavedChanges = true
     }
 

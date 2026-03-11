@@ -1,15 +1,17 @@
 import SwiftUI
 
 enum Theme {
-    static let midnight = Color(red: 0.03, green: 0.05, blue: 0.10)
-    static let nightBlue = Color(red: 0.05, green: 0.12, blue: 0.23)
-    static let ink = Color(red: 0.10, green: 0.11, blue: 0.20)
-    static let panel = Color(red: 0.09, green: 0.11, blue: 0.18)
-    static let panelElevated = Color(red: 0.13, green: 0.16, blue: 0.24)
+    static let midnight = Color(red: 0.03, green: 0.04, blue: 0.06)
+    static let nightBlue = Color(red: 0.05, green: 0.08, blue: 0.12)
+    static let ink = Color(red: 0.08, green: 0.10, blue: 0.14)
+    static let panel = Color(red: 0.10, green: 0.12, blue: 0.15)
+    static let panelElevated = Color(red: 0.14, green: 0.16, blue: 0.20)
+    static let panelMuted = Color(red: 0.16, green: 0.18, blue: 0.22)
     static let accentCyan = Color(red: 0.40, green: 0.84, blue: 1.0)
-    static let accentBlue = Color(red: 0.34, green: 0.53, blue: 0.99)
-    static let accentViolet = Color(red: 0.51, green: 0.36, blue: 0.98)
-    static let accentMint = Color(red: 0.47, green: 0.94, blue: 0.80)
+    static let accentBlue = Color(red: 0.30, green: 0.48, blue: 0.88)
+    static let accentViolet = Color(red: 0.42, green: 0.37, blue: 0.78)
+    static let accentMint = Color(red: 0.50, green: 0.88, blue: 0.72)
+    static let accentAmber = Color(red: 0.98, green: 0.72, blue: 0.33)
 
     static let backgroundGradient = LinearGradient(
         colors: [midnight, nightBlue, ink],
@@ -21,6 +23,12 @@ enum Theme {
         colors: [accentCyan, accentBlue, accentViolet],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
+    )
+
+    static let monitorGradient = LinearGradient(
+        colors: [panelElevated, panel],
+        startPoint: .top,
+        endPoint: .bottom
     )
 
     static let cardFill = Color.white.opacity(0.06)
@@ -42,7 +50,7 @@ struct AppBackdrop: View {
             Theme.backgroundGradient
 
             RadialGradient(
-                colors: [Theme.accentCyan.opacity(0.28), .clear],
+                colors: [Theme.accentCyan.opacity(0.14), .clear],
                 center: .topLeading,
                 startRadius: 20,
                 endRadius: 520
@@ -50,22 +58,43 @@ struct AppBackdrop: View {
             .blendMode(.screen)
 
             RadialGradient(
-                colors: [Theme.accentViolet.opacity(0.20), .clear],
+                colors: [Theme.accentBlue.opacity(0.10), .clear],
                 center: .bottomTrailing,
                 startRadius: 40,
                 endRadius: 460
             )
             .blendMode(.screen)
 
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.06),
-                    Color.clear,
-                    Color.black.opacity(0.22)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.035),
+                            Color.clear,
+                            Color.clear,
+                            Color.black.opacity(0.28)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+            Canvas { context, size in
+                let spacing: CGFloat = 28
+                var path = Path()
+
+                stride(from: 0, through: size.height, by: spacing).forEach { y in
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
+                }
+
+                stride(from: 0, through: size.width, by: spacing).forEach { x in
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: size.height))
+                }
+
+                context.stroke(path, with: .color(Color.white.opacity(0.015)), lineWidth: 0.5)
+            }
         }
         .ignoresSafeArea()
     }
