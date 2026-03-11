@@ -1,81 +1,118 @@
 # VideoNotes
 
-A native macOS app for taking timestamped notes while reviewing video. Type or speak — every note is automatically tagged with the video timecode.
+VideoNotes is a native Mac app for reviewing video and capturing clean, timecoded notes as you watch.
 
-Built with SwiftUI + AVKit. No external dependencies.
+Instead of stopping to scrub around and type notes somewhere else, you can review the cut, press a key, and keep going. Every note is attached to the exact moment in the video, can include a frame thumbnail in PDF export, and can be exported for common editorial workflows.
 
-## Features
+![Empty project](docs/screenshots/Empty%20Project.png)
 
-**Timestamped Note-Taking**
-- Start typing while a video plays and a note is created at the current timecode
-- Auto-pause mode pauses the video when you type, resumes when you hit Enter
-- With auto-pause off, the video keeps playing while you write
+## Why it is useful
 
-**Voice Mode**
-- Toggle the mic to dictate notes hands-free
-- Video keeps playing while you speak
-- Notes are timestamped when speech starts (with latency compensation)
-- Powered by Apple's Speech framework — all processing on-device
+VideoNotes is built for moments when you need to review footage quickly and come out with notes that are actually usable.
 
-**Export to NLE Markers**
-| Format | File | Use With |
-|--------|------|----------|
-| Plain Text | `.txt` | Any text editor |
-| PDF | `.pdf` | Sharing / print |
-| Avid SubCap | `.txt` | Avid Media Composer (Tools > Marker Tool > Import) |
-| Premiere CSV | `.csv` | Adobe Premiere Pro (via Marker Converter / Markerbox) |
-| Resolve EDL | `.edl` | DaVinci Resolve (Timelines > Import > Timeline Markers from EDL) |
+- Watch video and start typing immediately to create a timecoded note
+- Use voice mode for hands-free review
+- Export a readable PDF with frame thumbnails
+- Export markers for Avid, Premiere, Resolve, or plain text
+- Save a review session and reopen it later
 
-**Session Persistence**
-- Save/reopen `.videonotes` files to continue reviewing or re-export later
-- Video file references stored as security-scoped bookmarks
+## What it looks like
+
+### Loaded project
+
+This is the main review workspace once a clip is loaded.
+
+![Loaded project](docs/screenshots/Loaded%20Project.png)
+
+### Notes view
+
+Notes stay attached to timecode and are easy to jump back to.
+
+![Notes view](docs/screenshots/Notes.png)
+
+## How it works
+
+1. Open a video file.
+2. Play the video.
+3. Start typing to create a note at the current frame, or press `N` to add one manually.
+4. Press `Enter` to save the note.
+5. Export your notes when you are done.
+
+## Export options
+
+VideoNotes can export review notes in a few different ways depending on who needs them next.
+
+| Export | Best for |
+| --- | --- |
+| PDF | Sharing, printing, client review, frame-based note sheets |
+| Plain Text | Simple note lists |
+| Avid SubCap | Avid Media Composer workflows |
+| Premiere CSV | Adobe Premiere marker workflows |
+| Resolve EDL | DaVinci Resolve marker import |
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Space` | Play or pause |
+| `Cmd+O` | Open a video |
+| `N` | Add a note manually |
+| `E` | Export notes |
+| `Enter` | Save current note |
+| `Esc` | Cancel current note |
+| Any printable key | Start a new note from the current frame |
+
+## Voice notes
+
+Voice mode lets you dictate notes while the video keeps playing. VideoNotes timestamps the note from when speech starts, so the exported note is tied to the right moment instead of the end of the sentence.
+
+macOS will ask for microphone and speech recognition access the first time you use it.
+
+## PDF export
+
+The PDF export is designed to be readable, compact, and useful in real review sessions.
+
+- Frame thumbnail on the left
+- Timecode and note text on the right
+- Print-friendly layout
+- Great for sharing feedback with editors, producers, or clients
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
-- Xcode 15+ (to build)
-- Microphone access (for voice mode)
+- macOS 14 or later
+- Microphone access for voice mode
+- Xcode 15 or later if you want to build from source
 
-## Build & Run
+## Install and run
+
+### Option 1: Build from Terminal
 
 ```bash
-# Build
 swift build
-
-# Run the app
-./build-app.sh && open VideoNotes.app
+./build-app.sh
+open VideoNotes.app
 ```
 
-Or open `Package.swift` in Xcode and press **Cmd+R**.
+### Option 2: Open in Xcode
 
-## Keyboard Shortcuts
+Open `Package.swift` in Xcode and run the app with `Cmd+R`.
 
-| Key | Action |
-|-----|--------|
-| `Space` | Play / Pause |
-| `Cmd+O` | Open video file |
-| `Cmd+N` | Add note manually |
-| `Cmd+E` | Export notes |
-| `Enter` | Commit note |
-| `Esc` | Cancel note |
-| Any key | Start a new note (when video has focus) |
+## Supported video formats
 
-## Supported Formats
+VideoNotes uses Apple’s built-in playback stack, so it works with the formats macOS supports natively, including common `.mov` and `.mp4` files.
 
-Plays anything AVFoundation supports natively: **ProRes**, **H.264**, **H.265** (`.mov`, `.mp4`, `.m4v`).
+If you need DNxHD or DNxHR playback, install the [Avid codecs](https://www.avid.com/products/avid-codecs) on the Mac.
 
-DNxHD/DNxHR requires [Avid codecs](https://www.avid.com/products/avid-codecs) installed on the system.
+## Project structure
 
-## Project Structure
-
-```
+```text
 Sources/VideoNotes/
-├── App/                    # Entry point, shared state
-├── Models/                 # Note, Session, TimecodeInfo
-├── Views/                  # SwiftUI views
-├── ViewModels/             # Player + session logic
-├── Services/               # Exporters, speech, timecode extraction
-└── Utilities/              # Theme, key handling, CMTime extensions
+├── App/
+├── Models/
+├── Services/
+├── Utilities/
+├── ViewModels/
+└── Views/
 ```
 
 ## License
