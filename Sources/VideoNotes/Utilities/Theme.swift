@@ -182,3 +182,30 @@ extension View {
         modifier(SurfaceCard(cornerRadius: cornerRadius, fillOpacity: fillOpacity))
     }
 }
+
+struct OverlayGlassCard: ViewModifier {
+    var cornerRadius: CGFloat = Theme.cornerRadiusLarge
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(Color.black.opacity(0.18))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                    }
+            }
+    }
+}
+
+extension View {
+    func overlayGlassCard(cornerRadius: CGFloat = Theme.cornerRadiusLarge) -> some View {
+        modifier(OverlayGlassCard(cornerRadius: cornerRadius))
+    }
+}

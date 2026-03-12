@@ -126,6 +126,9 @@ struct ContentView: View {
                 }
             }
         )
+        .background(
+            ReviewModeWindowConfigurator(isReviewMode: isReviewMode)
+        )
         .onChange(of: isReviewMode) { _, enabled in
             reviewChromeHideTask?.cancel()
             if enabled {
@@ -387,7 +390,8 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .glassCard(cornerRadius: 18)
+        .overlayGlassCard(cornerRadius: 18)
+        .shadow(color: Color.black.opacity(0.22), radius: 18, y: 10)
     }
 
     private var reviewBottomBar: some View {
@@ -414,17 +418,9 @@ struct ContentView: View {
         .frame(maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.black.opacity(0.18))
-                }
+                .fill(Color.clear)
         )
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-        }
+        .overlayGlassCard(cornerRadius: 24)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: Color.black.opacity(0.25), radius: 24, y: 12)
     }
@@ -1136,6 +1132,49 @@ private struct FullscreenWindowObserver: NSViewRepresentable {
             ) { [weak self] _ in
                 self?.onChange(false)
             }
+        }
+    }
+}
+
+private struct ReviewModeWindowConfigurator: NSViewRepresentable {
+    let isReviewMode: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: view.window)
+            context.coordinator.apply(isReviewMode: isReviewMode)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: nsView.window)
+            context.coordinator.apply(isReviewMode: isReviewMode)
+        }
+    }
+
+    final class Coordinator {
+        private weak var window: NSWindow?
+
+        func attach(to window: NSWindow?) {
+            guard let window else { return }
+            self.window = window
+        }
+
+        func apply(isReviewMode: Bool) {
+            guard let window else { return }
+
+            window.titleVisibility = isReviewMode ? .hidden : .visible
+            window.titlebarAppearsTransparent = isReviewMode
+            window.toolbarStyle = .unified
+            window.toolbar?.showsBaselineSeparator = !isReviewMode
+            window.toolbar?.isVisible = !isReviewMode
         }
     }
 }
