@@ -109,6 +109,18 @@ struct ContentView: View {
             }
             return .ignored
         }
+        .onKeyPress(.leftArrow) {
+            guard !sessionVM.isEditing, playerVM.hasVideo else { return .ignored }
+            revealReviewChrome()
+            playerVM.seekBy(seconds: -5)
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            guard !sessionVM.isEditing, playerVM.hasVideo else { return .ignored }
+            revealReviewChrome()
+            playerVM.seekBy(seconds: 5)
+            return .handled
+        }
         .onReceive(NotificationCenter.default.publisher(for: .saveSession)) { _ in
             sessionVM.save()
         }

@@ -83,8 +83,13 @@ final class PlayerViewModel: ObservableObject {
     }
 
     func seek(to seconds: Double) {
-        let time = CMTime(seconds: seconds, preferredTimescale: 600)
+        let clampedSeconds = max(0, min(seconds, duration.safeSeconds > 0 ? duration.safeSeconds : seconds))
+        let time = CMTime(seconds: clampedSeconds, preferredTimescale: 600)
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    func seekBy(seconds delta: Double) {
+        seek(to: currentTime.safeSeconds + delta)
     }
 
     func captureFrameJPEG(at seconds: Double, maxSize: CGSize = CGSize(width: 640, height: 360)) async -> Data? {
