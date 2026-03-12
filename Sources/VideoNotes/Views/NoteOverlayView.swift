@@ -7,6 +7,8 @@ struct NoteOverlayView: View {
     var onCommit: () -> Void
     var onCancel: () -> Void
 
+    @State private var editorHeight: CGFloat = 52
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
@@ -29,18 +31,29 @@ struct NoteOverlayView: View {
                 }
             }
 
-            NoteInputField(
-                text: $noteText,
-                placeholder: "Add review note at current frame",
-                onSubmit: onCommit,
-                onCancel: onCancel
-            )
-            .frame(height: 48)
+            ZStack(alignment: .topLeading) {
+                if noteText.isEmpty {
+                    Text("Add review note at current frame")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.white.opacity(0.35))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .allowsHitTesting(false)
+                }
+
+                NoteInputField(
+                    text: $noteText,
+                    calculatedHeight: $editorHeight,
+                    onSubmit: onCommit,
+                    onCancel: onCancel
+                )
+                .frame(height: editorHeight)
+            }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.black.opacity(0.26))
+                    .fill(Color.black.opacity(0.20))
                     .overlay {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
@@ -52,19 +65,18 @@ struct NoteOverlayView: View {
         .frame(maxWidth: 640)
         .background {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.panelMuted.opacity(0.96), Theme.panel.opacity(0.96)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.black.opacity(0.18))
+                }
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
                 }
         }
-        .shadow(color: .black.opacity(0.34), radius: 18, y: 12)
+        .shadow(color: .black.opacity(0.30), radius: 18, y: 12)
     }
 
     private func shortcutPill(text: String, detail: String) -> some View {
@@ -86,58 +98,90 @@ struct NoteOverlayView: View {
 
 private struct NoteInputField: NSViewRepresentable {
     @Binding var text: String
-    let placeholder: String
+    @Binding var calculatedHeight: CGFloat
     let onSubmit: () -> Void
     let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit, onCancel: onCancel)
+        Coordinator(text: $text, calculatedHeight: $calculatedHeight, onSubmit: onSubmit, onCancel: onCancel)
     }
 
-    func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
-        field.delegate = context.coordinator
-        field.isBordered = false
-        field.isBezeled = false
-        field.drawsBackground = false
-        field.focusRingType = .none
-        field.font = .systemFont(ofSize: 15, weight: .medium)
-        field.textColor = .white
-        field.placeholderString = placeholder
-        field.placeholderAttributedString = NSAttributedString(
-            string: placeholder,
-            attributes: [.foregroundColor: NSColor.white.withAlphaComponent(0.35)]
-        )
-        field.stringValue = text
-        return field
-    }
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasVerticalScroller = false
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.backgroundColor = .clear
 
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        if nsView.stringValue != text {
-            nsView.stringValue = text
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return scrollView
         }
 
-        context.coordinator.focusIfNeeded(nsView)
+        textView.delegate = context.coordinator
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.allowsUndo = true
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.font = .systemFont(ofSize: 15, weight: .medium)
+        textView.textColor = .white
+        textView.insertionPointColor = .white
+        textView.textContainerInset = NSSize(width: 0, height: 0)
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.string = text
+
+        context.coordinator.textView = textView
+        context.coordinator.updateHeight(for: textView)
+        return scrollView
     }
 
-    final class Coordinator: NSObject, NSTextFieldDelegate {
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? NSTextView else { return }
+
+        if textView.string != text {
+            textView.string = text
+        }
+
+        context.coordinator.updateHeight(for: textView)
+        context.coordinator.focusIfNeeded(textView)
+        nsView.hasVerticalScroller = calculatedHeight >= context.coordinator.maxHeight
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
         @Binding private var text: String
+        @Binding private var calculatedHeight: CGFloat
         private let onSubmit: () -> Void
         private let onCancel: () -> Void
         private var didRequestInitialFocus = false
+        weak var textView: NSTextView?
 
-        init(text: Binding<String>, onSubmit: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        let minHeight: CGFloat = 24
+        let maxHeight: CGFloat = 180
+        let padding: CGFloat = 28
+
+        init(text: Binding<String>, calculatedHeight: Binding<CGFloat>, onSubmit: @escaping () -> Void, onCancel: @escaping () -> Void) {
             _text = text
+            _calculatedHeight = calculatedHeight
             self.onSubmit = onSubmit
             self.onCancel = onCancel
         }
 
-        func controlTextDidChange(_ obj: Notification) {
-            guard let field = obj.object as? NSTextField else { return }
-            text = field.stringValue
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            text = textView.string
+            updateHeight(for: textView)
         }
 
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             switch commandSelector {
             case #selector(NSResponder.insertNewline(_:)):
                 onSubmit()
@@ -150,21 +194,30 @@ private struct NoteInputField: NSViewRepresentable {
             }
         }
 
-        func focusIfNeeded(_ field: NSTextField) {
+        func updateHeight(for textView: NSTextView) {
+            textView.layoutManager?.ensureLayout(for: textView.textContainer!)
+            let usedRect = textView.layoutManager?.usedRect(for: textView.textContainer!) ?? .zero
+            let contentHeight = ceil(usedRect.height)
+            let targetHeight = min(max(contentHeight + padding, minHeight + padding), maxHeight)
+
+            DispatchQueue.main.async {
+                self.calculatedHeight = targetHeight
+            }
+        }
+
+        func focusIfNeeded(_ textView: NSTextView) {
             guard !didRequestInitialFocus else { return }
             didRequestInitialFocus = true
 
             DispatchQueue.main.async {
-                guard let window = field.window else {
+                guard let window = textView.window else {
                     self.didRequestInitialFocus = false
                     return
                 }
 
-                window.makeFirstResponder(field)
-                if let editor = window.fieldEditor(true, for: field) as? NSTextView {
-                    let length = field.stringValue.count
-                    editor.selectedRange = NSRange(location: length, length: 0)
-                }
+                window.makeFirstResponder(textView)
+                let length = textView.string.count
+                textView.setSelectedRange(NSRange(location: length, length: 0))
             }
         }
     }
