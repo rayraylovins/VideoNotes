@@ -4,6 +4,7 @@ struct NotesPanelView: View {
     @ObservedObject var sessionVM: SessionViewModel
     var onSeek: (Double) -> Void
     var isOverlayStyle: Bool = false
+    var onClose: (() -> Void)? = nil
 
     @State private var editText: String = ""
 
@@ -41,15 +42,31 @@ struct NotesPanelView: View {
 
                 Spacer()
 
-                Text("\(sessionVM.session.notes.count)")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule()
-                            .fill(Theme.accentCyan.opacity(0.22))
-                    )
+                HStack(spacing: 10) {
+                    if let onClose, isOverlayStyle {
+                        Button(action: onClose) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white.opacity(0.88))
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    Circle()
+                                        .fill(Color.white.opacity(0.08))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text("\(sessionVM.session.notes.count)")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule()
+                                .fill(Theme.accentCyan.opacity(0.22))
+                        )
+                }
             }
 
             HStack(spacing: 10) {

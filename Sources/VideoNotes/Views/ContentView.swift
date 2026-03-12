@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var isReviewMode = false
     @State private var isReviewChromeVisible = true
     @State private var isReviewNotesPanelVisible = false
+    @State private var isWindowFullscreen = false
     @State private var reviewChromeHideTask: Task<Void, Never>?
 
     var body: some View {
@@ -120,6 +121,20 @@ struct ContentView: View {
                 revealReviewChrome()
             }
         }
+        .background(
+            FullscreenWindowObserver { isFullscreen in
+                isWindowFullscreen = isFullscreen
+
+                if isFullscreen {
+                    if !isReviewMode {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            isReviewMode = true
+                        }
+                    }
+                    revealReviewChrome()
+                }
+            }
+        )
         .onChange(of: isReviewMode) { _, enabled in
             reviewChromeHideTask?.cancel()
             if enabled {
@@ -398,7 +413,12 @@ struct ContentView: View {
         NotesPanelView(sessionVM: sessionVM, onSeek: { seconds in
             playerVM.seek(to: seconds)
             revealReviewChrome(keepVisible: true)
-        }, isOverlayStyle: true)
+        }, isOverlayStyle: true, onClose: {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                isReviewNotesPanelVisible = false
+            }
+            scheduleReviewChromeHide()
+        })
         .frame(width: 340)
         .frame(maxHeight: .infinity)
         .background(
@@ -801,6 +821,9 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 0.22)) {
             isReviewMode.toggle()
         }
+        if !isReviewMode {
+            isReviewNotesPanelVisible = false
+        }
         revealReviewChrome(keepVisible: true)
     }
 
@@ -1010,6 +1033,78 @@ private struct AppIconPreview: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Theme.heroGradient)
                     .frame(width: size, height: size)
+            }
+        }
+    }
+}
+
+private struct FullscreenWindowObserver: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: view.window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: nsView.window)
+        }
+    }
+
+    final class Coordinator {
+        private let onChange: (Bool) -> Void
+        private weak var window: NSWindow?
+        private var willEnterObserver: NSObjectProtocol?
+        private var willExitObserver: NSObjectProtocol?
+
+        init(onChange: @escaping (Bool) -> Void) {
+            self.onChange = onChange
+        }
+
+        deinit {
+            if let willEnterObserver {
+                NotificationCenter.default.removeObserver(willEnterObserver)
+            }
+            if let willExitObserver {
+                NotificationCenter.default.removeObserver(willExitObserver)
+            }
+        }
+
+        func attach(to window: NSWindow?) {
+            guard let window, self.window !== window else { return }
+
+            if let willEnterObserver {
+                NotificationCenter.default.removeObserver(willEnterObserver)
+            }
+            if let willExitObserver {
+                NotificationCenter.default.removeObserver(willExitObserver)
+            }
+
+            self.window = window
+            onChange(window.styleMask.contains(.fullScreen))
+
+            willEnterObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willEnterFullScreenNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                self?.onChange(true)
+            }
+
+            willExitObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willExitFullScreenNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                self?.onChange(false)
             }
         }
     }
