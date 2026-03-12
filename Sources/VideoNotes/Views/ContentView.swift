@@ -304,7 +304,7 @@ struct ContentView: View {
 
     private var reviewVideoWorkspace: some View {
         ZStack {
-            playerSurface(videoGravity: .resizeAspectFill)
+            playerSurface(videoGravity: .resizeAspect)
                 .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
 
             LinearGradient(
