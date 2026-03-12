@@ -995,6 +995,11 @@ struct ContentView: View {
                 return false
             }
 
+            let initialText = event.characters ?? ""
+            guard initialText != " " else {
+                return false
+            }
+
             if autoPauseEnabled && playerVM.isPlaying {
                 wasPausedByAutoPause = true
                 playerVM.pause()
@@ -1008,7 +1013,6 @@ struct ContentView: View {
                 frameRate: playerVM.frameRate,
                 dropFrame: playerVM.isDropFrame
             )
-            let initialText = event.characters ?? ""
             sessionVM.beginNote(
                 timecodeSeconds: playerVM.currentTime.safeSeconds,
                 timecodeString: tc.description,
