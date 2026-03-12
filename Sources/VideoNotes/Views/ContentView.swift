@@ -100,27 +100,6 @@ struct ContentView: View {
             speechService.stopListening()
             playerVM.cleanup()
         }
-        .focusable()
-        .onKeyPress(.space) {
-            if !sessionVM.isEditing {
-                revealReviewChrome()
-                playerVM.togglePlayPause()
-                return .handled
-            }
-            return .ignored
-        }
-        .onKeyPress(.leftArrow) {
-            guard !sessionVM.isEditing, playerVM.hasVideo else { return .ignored }
-            revealReviewChrome()
-            playerVM.seekBy(seconds: -5)
-            return .handled
-        }
-        .onKeyPress(.rightArrow) {
-            guard !sessionVM.isEditing, playerVM.hasVideo else { return .ignored }
-            revealReviewChrome()
-            playerVM.seekBy(seconds: 5)
-            return .handled
-        }
         .onReceive(NotificationCenter.default.publisher(for: .saveSession)) { _ in
             sessionVM.save()
         }
@@ -990,6 +969,29 @@ struct ContentView: View {
     }
 
     private func setupKeyHandler() {
+        keyHandler.onKeyDown = { event in
+            guard !sessionVM.isEditing, playerVM.hasVideo else {
+                return false
+            }
+
+            switch Int(event.keyCode) {
+            case 49: // Space
+                revealReviewChrome()
+                playerVM.togglePlayPause()
+                return true
+            case 123: // Left arrow
+                revealReviewChrome()
+                playerVM.seekBy(seconds: -5)
+                return true
+            case 124: // Right arrow
+                revealReviewChrome()
+                playerVM.seekBy(seconds: 5)
+                return true
+            default:
+                return false
+            }
+        }
+
         keyHandler.onPrintableKey = { event in
             guard !voiceModeEnabled,
                   playerVM.hasVideo,

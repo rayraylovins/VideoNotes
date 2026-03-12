@@ -5,6 +5,9 @@ final class KeyEventHandler: ObservableObject {
     private var localMonitor: Any?
     private(set) var isActive: Bool = false
 
+    /// Called for any keyDown event. Return true to consume the event.
+    var onKeyDown: ((NSEvent) -> Bool)?
+
     /// Called when a printable key is pressed. Return true to consume the event.
     var onPrintableKey: ((NSEvent) -> Bool)?
 
@@ -17,6 +20,10 @@ final class KeyEventHandler: ObservableObject {
             // Always let command-modified keys pass through
             if event.modifierFlags.contains(.command) {
                 return event
+            }
+
+            if self.onKeyDown?(event) == true {
+                return nil
             }
 
             guard let chars = event.characters, !chars.isEmpty else { return event }
