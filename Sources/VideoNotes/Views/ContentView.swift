@@ -935,6 +935,7 @@ struct ContentView: View {
                 sessionVM.commitNote(thumbnailJPEGData: thumbnailJPEGData)
                 if wasAutoPaused { playerVM.play() }
                 wasPausedByAutoPause = false
+                restoreKeyboardFocus()
                 restartKeyMonitor()
                 scheduleReviewChromeHide()
             }
@@ -945,6 +946,7 @@ struct ContentView: View {
         sessionVM.cancelNote()
         if wasPausedByAutoPause { playerVM.play() }
         wasPausedByAutoPause = false
+        restoreKeyboardFocus()
         restartKeyMonitor()
         scheduleReviewChromeHide()
     }
@@ -1029,6 +1031,16 @@ struct ContentView: View {
     private func restartKeyMonitor() {
         if !keyHandler.isActive && !voiceModeEnabled {
             keyHandler.start()
+        }
+    }
+
+    private func restoreKeyboardFocus() {
+        DispatchQueue.main.async {
+            guard let window = NSApp.keyWindow else { return }
+            window.makeFirstResponder(nil)
+            if let contentView = window.contentView {
+                window.makeFirstResponder(contentView)
+            }
         }
     }
 }
