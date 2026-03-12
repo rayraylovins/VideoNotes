@@ -11,20 +11,23 @@ struct ContentView: View {
     @State private var autoPauseEnabled = true
     @State private var voiceModeEnabled = false
     @State private var wasPausedByAutoPause = false
+    @State private var isReviewMode = false
+    @State private var isReviewChromeVisible = true
+    @State private var isReviewNotesPanelVisible = false
+    @State private var reviewChromeHideTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
             AppBackdrop()
 
-            VStack(spacing: 14) {
-                appTopStrip
-
-                HStack(alignment: .top, spacing: 14) {
-                    videoWorkspace
-                    notesWorkspace
+            Group {
+                if isReviewMode {
+                    reviewModeLayout
+                } else {
+                    standardLayout
                 }
             }
-            .padding(16)
+            .padding(isReviewMode ? 10 : 16)
         }
         .preferredColorScheme(.dark)
         .toolbar {
@@ -36,6 +39,19 @@ struct ContentView: View {
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
+                Button(action: toggleReviewMode) {
+                    Label(isReviewMode ? "Exit Review" : "Review Mode", systemImage: isReviewMode ? "rectangle.inset.filled.and.person.filled" : "rectangle.inset.filled")
+                }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+
+                if isReviewMode {
+                    Button(action: toggleReviewNotesPanel) {
+                        Label("Notes Panel", systemImage: isReviewNotesPanelVisible ? "sidebar.right" : "sidebar.right")
+                    }
+                    .keyboardShortcut("l", modifiers: [.command, .shift])
+                    .disabled(sessionVM.session.notes.isEmpty && !playerVM.hasVideo)
+                }
+
                 Toggle(isOn: $voiceModeEnabled) {
                     Label("Voice", systemImage: voiceModeEnabled ? "waveform.badge.mic" : "mic")
                 }
@@ -78,6 +94,7 @@ struct ContentView: View {
             speechService.requestPermissions()
         }
         .onDisappear {
+            reviewChromeHideTask?.cancel()
             keyHandler.stop()
             speechService.stopListening()
             playerVM.cleanup()
@@ -85,6 +102,7 @@ struct ContentView: View {
         .focusable()
         .onKeyPress(.space) {
             if !sessionVM.isEditing {
+                revealReviewChrome()
                 playerVM.togglePlayPause()
                 return .handled
             }
@@ -99,8 +117,71 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openSession)) { _ in
             if let videoURL = sessionVM.openSession() {
                 playerVM.loadVideo(url: videoURL)
+                revealReviewChrome()
             }
         }
+        .onChange(of: isReviewMode) { _, enabled in
+            reviewChromeHideTask?.cancel()
+            if enabled {
+                isReviewChromeVisible = true
+                scheduleReviewChromeHide()
+            } else {
+                isReviewChromeVisible = true
+                isReviewNotesPanelVisible = false
+            }
+        }
+        .onChange(of: sessionVM.isEditing) { _, editing in
+            if editing {
+                revealReviewChrome(keepVisible: true)
+            } else {
+                scheduleReviewChromeHide()
+            }
+        }
+        .onChange(of: speechService.isListening) { _, listening in
+            if listening {
+                revealReviewChrome(keepVisible: true)
+            } else {
+                scheduleReviewChromeHide()
+            }
+        }
+        .onChange(of: isReviewNotesPanelVisible) { _, visible in
+            if visible {
+                revealReviewChrome(keepVisible: true)
+            } else {
+                scheduleReviewChromeHide()
+            }
+        }
+        .onChange(of: playerVM.playbackError) { _, _ in
+            revealReviewChrome(keepVisible: true)
+        }
+        .onChange(of: speechService.errorMessage) { _, _ in
+            revealReviewChrome(keepVisible: true)
+        }
+    }
+
+    private var standardLayout: some View {
+        VStack(spacing: 14) {
+            appTopStrip
+
+            HStack(alignment: .top, spacing: 14) {
+                standardVideoWorkspace
+                standardNotesWorkspace
+            }
+        }
+    }
+
+    private var reviewModeLayout: some View {
+        ZStack(alignment: .trailing) {
+            reviewVideoWorkspace
+
+            if isReviewNotesPanelVisible {
+                reviewNotesOverlay
+                    .padding(.trailing, 18)
+                    .padding(.vertical, 18)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.22), value: isReviewNotesPanelVisible)
     }
 
     private var appTopStrip: some View {
@@ -135,12 +216,10 @@ struct ContentView: View {
         }
     }
 
-    private var videoWorkspace: some View {
+    private var standardVideoWorkspace: some View {
         VStack(spacing: 0) {
             playerHeader
-
-            monitorArea
-
+            standardMonitorArea
             playerFooter
         }
         .frame(minWidth: 600, minHeight: 440)
@@ -156,23 +235,17 @@ struct ContentView: View {
         .shadow(color: Color.black.opacity(0.34), radius: 34, y: 22)
     }
 
-    private var monitorArea: some View {
+    private var standardMonitorArea: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.black.opacity(0.30))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
 
-            Group {
-                if playerVM.hasVideo {
-                    VideoPlayerView(player: playerVM.player)
-                } else {
-                    emptyStateView
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            playerSurface(videoGravity: .resizeAspect)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
 
             if playerVM.hasVideo {
                 bottomOverlay
@@ -180,19 +253,12 @@ struct ContentView: View {
                     .padding(.bottom, 28)
             }
 
-            if let error = playerVM.playbackError {
-                errorOverlay(error: error)
-            }
-
-            if let error = speechService.errorMessage {
-                speechErrorOverlay(error: error)
-                    .padding(.bottom, 28)
-            }
+            errorLayers(bottomPadding: 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var notesWorkspace: some View {
+    private var standardNotesWorkspace: some View {
         NotesPanelView(sessionVM: sessionVM) { seconds in
             playerVM.seek(to: seconds)
         }
@@ -207,6 +273,158 @@ struct ContentView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadiusXLarge, style: .continuous))
         .shadow(color: Color.black.opacity(0.28), radius: 26, y: 18)
+    }
+
+    private var reviewVideoWorkspace: some View {
+        ZStack {
+            playerSurface(videoGravity: .resizeAspectFill)
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(shouldShowReviewChrome ? 0.10 : 0.02),
+                    Color.clear,
+                    Color.black.opacity(shouldShowReviewChrome ? 0.12 : 0.04)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                if shouldShowReviewChrome {
+                    reviewTopBar
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    bottomOverlay
+
+                    if shouldShowReviewChrome {
+                        reviewBottomBar
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 22)
+            }
+
+            errorLayers(bottomPadding: 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(Color.black)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .shadow(color: Color.black.opacity(0.34), radius: 34, y: 22)
+        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .onTapGesture {
+            revealReviewChrome()
+        }
+        .onContinuousHover { phase in
+            switch phase {
+            case .active:
+                revealReviewChrome()
+            case .ended:
+                scheduleReviewChromeHide()
+            }
+        }
+    }
+
+    private var reviewTopBar: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                AppIconPreview(size: 28, cornerRadius: 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sessionVM.session.videoFileName.isEmpty ? "Review Mode" : sessionVM.session.videoFileName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+
+                    Text("REVIEW MODE")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .tracking(1.4)
+                        .foregroundColor(Theme.tertiaryText)
+                }
+            }
+
+            Spacer()
+
+            Button(action: toggleReviewNotesPanel) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sidebar.right")
+                    Text("Notes \(sessionVM.session.notes.count)")
+                }
+                .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.black.opacity(0.26)))
+
+            monitorBadge(
+                text: playerVM.isPlaying ? "PLAY" : "STOP",
+                tint: playerVM.isPlaying ? Theme.accentMint : Theme.accentAmber
+            )
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .glassCard(cornerRadius: 18)
+    }
+
+    private var reviewBottomBar: some View {
+        HStack(spacing: 12) {
+            compactFooterPill(systemName: playerVM.isPlaying ? "play.fill" : "pause.fill", text: playerVM.currentTimecodeString, accent: Theme.accentCyan, monospaced: true)
+            compactFooterPill(systemName: voiceModeEnabled ? "waveform" : "keyboard", text: footerHintText, accent: voiceModeEnabled ? .red : Theme.accentAmber, monospaced: false)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .glassCard(cornerRadius: 18)
+    }
+
+    private var reviewNotesOverlay: some View {
+        NotesPanelView(sessionVM: sessionVM, onSeek: { seconds in
+            playerVM.seek(to: seconds)
+            revealReviewChrome(keepVisible: true)
+        }, isOverlayStyle: true)
+        .frame(width: 340)
+        .frame(maxHeight: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.black.opacity(0.18))
+                }
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.25), radius: 24, y: 12)
+    }
+
+    @ViewBuilder
+    private func playerSurface(videoGravity: AVLayerVideoGravity) -> some View {
+        if playerVM.hasVideo {
+            VideoPlayerView(player: playerVM.player, videoGravity: videoGravity)
+        } else {
+            emptyStateView
+        }
     }
 
     private var playerHeader: some View {
@@ -374,6 +592,18 @@ struct ContentView: View {
         .surfaceCard(cornerRadius: 16, fillOpacity: 0.96)
     }
 
+    @ViewBuilder
+    private func errorLayers(bottomPadding: CGFloat) -> some View {
+        if let error = playerVM.playbackError {
+            errorOverlay(error: error)
+        }
+
+        if let error = speechService.errorMessage {
+            speechErrorOverlay(error: error)
+                .padding(.bottom, bottomPadding)
+        }
+    }
+
     private func errorOverlay(error: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -446,6 +676,19 @@ struct ContentView: View {
             return "Type anywhere to drop a note"
         }
         return "Press N for manual note"
+    }
+
+    private var shouldKeepReviewChromeVisible: Bool {
+        sessionVM.isEditing ||
+        speechService.isListening ||
+        isReviewNotesPanelVisible ||
+        playerVM.playbackError != nil ||
+        speechService.errorMessage != nil ||
+        !playerVM.hasVideo
+    }
+
+    private var shouldShowReviewChrome: Bool {
+        !isReviewMode || isReviewChromeVisible || shouldKeepReviewChromeVisible
     }
 
     private func stripStatus(title: String, value: String) -> some View {
@@ -521,6 +764,24 @@ struct ContentView: View {
         )
     }
 
+    private func compactFooterPill(systemName: String, text: String, accent: Color, monospaced: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemName)
+                .foregroundColor(accent)
+
+            Text(text)
+                .font(.system(size: 12, weight: .semibold, design: monospaced ? .monospaced : .default))
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            Capsule()
+                .fill(Color.black.opacity(0.22))
+        )
+    }
+
     private func productionTag(systemName: String, text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemName)
@@ -536,6 +797,48 @@ struct ContentView: View {
         )
     }
 
+    private func toggleReviewMode() {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            isReviewMode.toggle()
+        }
+        revealReviewChrome(keepVisible: true)
+    }
+
+    private func toggleReviewNotesPanel() {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            isReviewNotesPanelVisible.toggle()
+        }
+        revealReviewChrome(keepVisible: isReviewNotesPanelVisible)
+    }
+
+    private func revealReviewChrome(keepVisible: Bool = false) {
+        guard isReviewMode else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            isReviewChromeVisible = true
+        }
+        if keepVisible {
+            reviewChromeHideTask?.cancel()
+        } else {
+            scheduleReviewChromeHide()
+        }
+    }
+
+    private func scheduleReviewChromeHide() {
+        reviewChromeHideTask?.cancel()
+        guard isReviewMode, !shouldKeepReviewChromeVisible else { return }
+
+        reviewChromeHideTask = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard isReviewMode, !shouldKeepReviewChromeVisible else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isReviewChromeVisible = false
+                }
+            }
+        }
+    }
+
     private func openVideo() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.movie, .mpeg4Movie, .quickTimeMovie]
@@ -544,6 +847,7 @@ struct ContentView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         playerVM.loadVideo(url: url)
+        revealReviewChrome(keepVisible: true)
 
         Task {
             try? await Task.sleep(for: .milliseconds(500))
@@ -568,6 +872,7 @@ struct ContentView: View {
         if wasPlaying { playerVM.pause() }
 
         keyHandler.stop()
+        revealReviewChrome(keepVisible: true)
 
         let tc = playerVM.currentTime.toTimecodeInfo(
             frameRate: playerVM.frameRate,
@@ -596,6 +901,7 @@ struct ContentView: View {
                 if wasAutoPaused { playerVM.play() }
                 wasPausedByAutoPause = false
                 restartKeyMonitor()
+                scheduleReviewChromeHide()
             }
         }
     }
@@ -605,9 +911,12 @@ struct ContentView: View {
         if wasPausedByAutoPause { playerVM.play() }
         wasPausedByAutoPause = false
         restartKeyMonitor()
+        scheduleReviewChromeHide()
     }
 
     private func handleVoiceModeToggle(enabled: Bool) {
+        revealReviewChrome(keepVisible: enabled)
+
         if enabled {
             autoPauseEnabled = false
             keyHandler.stop()
@@ -657,6 +966,8 @@ struct ContentView: View {
             } else {
                 wasPausedByAutoPause = false
             }
+
+            revealReviewChrome(keepVisible: true)
 
             let tc = playerVM.currentTime.toTimecodeInfo(
                 frameRate: playerVM.frameRate,

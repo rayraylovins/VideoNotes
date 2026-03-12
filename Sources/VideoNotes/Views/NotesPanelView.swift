@@ -3,6 +3,7 @@ import SwiftUI
 struct NotesPanelView: View {
     @ObservedObject var sessionVM: SessionViewModel
     var onSeek: (Double) -> Void
+    var isOverlayStyle: Bool = false
 
     @State private var editText: String = ""
 
@@ -58,8 +59,8 @@ struct NotesPanelView: View {
             }
         }
         .padding(.horizontal, 18)
-        .padding(.top, 18)
-        .padding(.bottom, 16)
+        .padding(.top, isOverlayStyle ? 16 : 18)
+        .padding(.bottom, isOverlayStyle ? 12 : 16)
     }
 
     private var emptyPanel: some View {
@@ -112,7 +113,7 @@ struct NotesPanelView: View {
             .foregroundColor(Theme.tertiaryText)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.black.opacity(0.16))
+            .background(Color.black.opacity(isOverlayStyle ? 0.10 : 0.16))
 
             ScrollView {
                 LazyVStack(spacing: 8) {

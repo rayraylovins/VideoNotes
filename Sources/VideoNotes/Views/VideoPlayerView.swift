@@ -3,19 +3,23 @@ import AVKit
 
 struct VideoPlayerView: NSViewRepresentable {
     let player: AVPlayer
+    var videoGravity: AVLayerVideoGravity = .resizeAspect
 
     func makeNSView(context: Context) -> AVPlayerView {
         let view = TransparentPlayerView()
         view.player = player
         view.controlsStyle = .floating
         view.showsFullScreenToggleButton = true
-        view.videoGravity = .resizeAspect
+        view.videoGravity = videoGravity
         return view
     }
 
     func updateNSView(_ nsView: AVPlayerView, context: Context) {
         if nsView.player !== player {
             nsView.player = player
+        }
+        if nsView.videoGravity != videoGravity {
+            nsView.videoGravity = videoGravity
         }
     }
 }
