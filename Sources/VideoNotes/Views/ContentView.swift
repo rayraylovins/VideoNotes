@@ -120,15 +120,7 @@ struct ContentView: View {
 
     private var stripTitle: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Theme.heroGradient)
-                    .frame(width: 34, height: 34)
-
-                Image(systemName: "timeline.selection")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
-            }
+            AppIconPreview(size: 34, cornerRadius: 9)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("VIDEO NOTES")
@@ -297,14 +289,7 @@ struct ContentView: View {
                 Spacer()
 
                 HStack(alignment: .top, spacing: 14) {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Theme.heroGradient.opacity(0.28))
-                        .frame(width: 60, height: 60)
-                        .overlay {
-                            Image(systemName: "play.rectangle")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
+                    AppIconPreview(size: 60, cornerRadius: 14)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Load media to begin a review pass")
@@ -369,11 +354,13 @@ struct ContentView: View {
 
             Divider()
                 .background(Color.white.opacity(0.12))
+                .frame(height: 16)
 
             Text(speechService.currentTranscript.isEmpty ? "Listening for speech…" : speechService.currentTranscript)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(Theme.secondaryText)
-                .lineLimit(2)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
             Spacer()
 
@@ -381,9 +368,9 @@ struct ContentView: View {
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundColor(Theme.accentCyan)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: 640)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 520)
         .surfaceCard(cornerRadius: 16, fillOpacity: 0.96)
     }
 
@@ -692,6 +679,27 @@ struct ContentView: View {
     private func restartKeyMonitor() {
         if !keyHandler.isActive && !voiceModeEnabled {
             keyHandler.start()
+        }
+    }
+}
+
+private struct AppIconPreview: View {
+    let size: CGFloat
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        Group {
+            if let iconImage = NSImage(contentsOf: Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/AppIcon.icns")) {
+                Image(nsImage: iconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Theme.heroGradient)
+                    .frame(width: size, height: size)
+            }
         }
     }
 }

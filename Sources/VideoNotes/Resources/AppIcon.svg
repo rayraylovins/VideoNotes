@@ -1,40 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1E1246"/>
-      <stop offset="50%" style="stop-color:#24296B"/>
-      <stop offset="100%" style="stop-color:#2D1860"/>
+      <stop offset="0%" style="stop-color:#415677"/>
+      <stop offset="45%" style="stop-color:#2A3850"/>
+      <stop offset="100%" style="stop-color:#1A2433"/>
     </linearGradient>
     <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4D99FF"/>
-      <stop offset="100%" style="stop-color:#8B5CF6"/>
+      <stop offset="0%" style="stop-color:#7CE7FF"/>
+      <stop offset="100%" style="stop-color:#5B8FFF"/>
     </linearGradient>
-    <linearGradient id="pen" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFFFFF"/>
-      <stop offset="100%" style="stop-color:#C4B5FD"/>
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.16"/>
+      <stop offset="50%" style="stop-color:#FFFFFF;stop-opacity:0.03"/>
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0"/>
     </linearGradient>
   </defs>
 
-  <!-- Full square background — macOS applies its own icon mask -->
-  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  <rect x="36" y="36" width="952" height="952" rx="210" fill="url(#bg)"/>
+  <rect x="36" y="36" width="952" height="952" rx="210" fill="url(#gloss)"/>
+  <rect x="37" y="37" width="950" height="950" rx="209" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
 
-  <!-- Play triangle — slightly left of center -->
-  <path d="M340 310 L340 714 L700 512 Z" fill="url(#accent)" opacity="0.9"/>
+  <path d="M408 312 L408 590 L650 451 Z" fill="url(#accent)"/>
 
-  <!-- Pen stroke — diagonal from bottom-right, crossing over the play button -->
-  <g transform="translate(520, 280) rotate(35)">
-    <!-- Pen body -->
-    <rect x="-12" y="0" width="24" height="340" rx="6" fill="url(#pen)" opacity="0.95"/>
-    <!-- Pen tip -->
-    <polygon points="-12,340 12,340 0,380" fill="url(#pen)" opacity="0.95"/>
-    <!-- Pen line detail -->
-    <rect x="-12" y="0" width="24" height="40" rx="6" fill="url(#accent)" opacity="0.6"/>
-  </g>
-
-  <!-- Small writing lines — bottom left area suggesting notes -->
-  <g opacity="0.4">
-    <rect x="200" y="750" width="200" height="6" rx="3" fill="white"/>
-    <rect x="200" y="780" width="150" height="6" rx="3" fill="white"/>
-    <rect x="200" y="810" width="180" height="6" rx="3" fill="white"/>
-  </g>
+  <rect x="290" y="638" width="260" height="22" rx="11" fill="url(#accent)" fill-opacity="0.95"/>
+  <rect x="290" y="688" width="420" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.14"/>
+  <rect x="290" y="732" width="338" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.10"/>
 </svg>
