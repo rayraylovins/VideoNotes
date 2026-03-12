@@ -1161,6 +1161,10 @@ private struct ReviewModeWindowConfigurator: NSViewRepresentable {
 
     final class Coordinator {
         private weak var window: NSWindow?
+        private var mouseMonitor: Any?
+        private var hideTask: DispatchWorkItem?
+        private var toolbarShown = false
+        private static let revealZoneHeight: CGFloat = 12
 
         func attach(to window: NSWindow?) {
             guard let window else { return }
@@ -1174,7 +1178,90 @@ private struct ReviewModeWindowConfigurator: NSViewRepresentable {
             window.titlebarAppearsTransparent = isReviewMode
             window.toolbarStyle = .unified
             window.toolbar?.showsBaselineSeparator = !isReviewMode
-            window.toolbar?.isVisible = !isReviewMode
+
+            if isReviewMode {
+                window.toolbar?.isVisible = false
+                toolbarShown = false
+                startMouseMonitor()
+            } else {
+                window.toolbar?.isVisible = true
+                toolbarShown = false
+                stopMouseMonitor()
+            }
+        }
+
+        private func startMouseMonitor() {
+            stopMouseMonitor()
+            mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+                self?.handleMouseMoved()
+                return event
+            }
+        }
+
+        private func stopMouseMonitor() {
+            if let monitor = mouseMonitor {
+                NSEvent.removeMonitor(monitor)
+                mouseMonitor = nil
+            }
+            hideTask?.cancel()
+            hideTask = nil
+        }
+
+        private func handleMouseMoved() {
+            guard let window else { return }
+
+            let mouseLocation = NSEvent.mouseLocation
+            let windowFrame = window.frame
+
+            guard windowFrame.contains(mouseLocation) else { return }
+
+            let distanceFromTop = windowFrame.maxY - mouseLocation.y
+
+            if distanceFromTop <= Self.revealZoneHeight {
+                showToolbar()
+            } else if toolbarShown {
+                let toolbarHeight: CGFloat = 52
+                if distanceFromTop > toolbarHeight + 20 {
+                    scheduleHideToolbar()
+                }
+            }
+        }
+
+        private func showToolbar() {
+            guard let window, !toolbarShown else { return }
+            hideTask?.cancel()
+            hideTask = nil
+            toolbarShown = true
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.2
+                ctx.allowsImplicitAnimation = true
+                window.toolbar?.isVisible = true
+            }
+        }
+
+        private func scheduleHideToolbar() {
+            hideTask?.cancel()
+            let task = DispatchWorkItem { [weak self] in
+                guard let self, let window = self.window, self.toolbarShown else { return }
+                let mouseLocation = NSEvent.mouseLocation
+                let windowFrame = window.frame
+                let distanceFromTop = windowFrame.maxY - mouseLocation.y
+                let toolbarHeight: CGFloat = 52
+                if distanceFromTop > toolbarHeight + 20 {
+                    self.toolbarShown = false
+                    NSAnimationContext.runAnimationGroup { ctx in
+                        ctx.duration = 0.2
+                        ctx.allowsImplicitAnimation = true
+                        window.toolbar?.isVisible = false
+                    }
+                }
+            }
+            hideTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: task)
+        }
+
+        deinit {
+            stopMouseMonitor()
         }
     }
 }
