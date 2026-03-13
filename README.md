@@ -85,7 +85,11 @@ The PDF export is designed to be readable, compact, and useful in real review se
 
 ## Install and run
 
-### Option 1: Build from Terminal
+### Download
+
+Grab the latest DMG from the [Releases page](https://github.com/rayraylovins/VideoNotes/releases/latest), open it, and drag VideoNotes to your Applications folder.
+
+### Build from source
 
 ```bash
 swift build
@@ -93,9 +97,7 @@ swift build
 open VideoNotes.app
 ```
 
-### Option 2: Open in Xcode
-
-Open `Package.swift` in Xcode and run the app with `Cmd+R`.
+Or open `Package.swift` in Xcode and run with `Cmd+R`.
 
 ## Supported video formats
 
