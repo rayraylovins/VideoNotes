@@ -5,3 +5,9 @@ VideoNotes.app/
 *.xcodeproj/
 xcuserdata/
 DerivedData/
+CLAUDE.md
+.claude/
+Screenshots/
+dist/
+*.dmg
+*.zip
